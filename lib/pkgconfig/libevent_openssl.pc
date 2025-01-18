@@ -1,0 +1,15 @@
+prefix=${pcfiledir}/../..
+#libevent pkg-config source file
+
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libevent_openssl
+Description: libevent_openssl adds openssl-based TLS support to libevent
+Version: 2.1.12
+Conflicts:
+
+Libs: -L"${libdir}" -levent_openssl -L"${prefix}/lib/libssl.a" -L"${prefix}/lib/libcrypto.a" -Ldl -Ldl
+Requires: libevent
+Cflags: -I"${includedir}" 
