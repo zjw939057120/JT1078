@@ -1,9 +1,19 @@
-#include <evpp/tcp_client.h>
-#include <evpp/buffer.h>
-#include <evpp/tcp_conn.h>
+#include "tcp_client.h"
+#include "MessageCallback.h"
+#include "ConnectionCallback.h"
 
-int main(int argc, char* argv[]) {
-    std::string addr = "127.0.0.1:9099";
+ConnectionCallback *connectionCallback = new ConnectionCallback();
+
+void SendMessage(const evpp::TCPConnPtr &conn) {
+    if (conn->IsConnected()) {
+        connectionCallback->Send(conn);
+    }
+}
+
+int main(int argc, char *argv[]) {
+    MessageCallback *messageCallback = new MessageCallback();
+
+    std::string addr = "47.100.112.218:8808";
 
     if (argc == 2) {
         addr = argv[1];
@@ -11,16 +21,22 @@ int main(int argc, char* argv[]) {
 
     evpp::EventLoop loop;
     evpp::TCPClient client(&loop, addr, "TCPPingPongClient");
-    client.SetMessageCallback([&loop, &client](const evpp::TCPConnPtr& conn,
-                                               evpp::Buffer* msg) {
-        LOG_TRACE << "Receive a message [" << msg->ToString() << "]";
-        client.Disconnect();
+    client.SetMessageCallback([&loop, &client, &messageCallback](const evpp::TCPConnPtr &conn,
+                                                                 evpp::Buffer *msg) {
+        //LOG_INFO << "Receive a message [" << msg->ToString() << "]";
+        //client.Disconnect();
+
+        messageCallback->Receive(msg);
+        msg->Reset();
     });
 
-    client.SetConnectionCallback([](const evpp::TCPConnPtr& conn) {
+    client.SetConnectionCallback([&loop](const evpp::TCPConnPtr &conn) {
         if (conn->IsConnected()) {
             LOG_INFO << "Connected to " << conn->remote_addr();
-            conn->Send("hello");
+            //conn->Send("hello");
+
+            evpp::Duration duration(3.0);
+            loop.RunEvery(duration, [conn]() { SendMessage(conn); });
         } else {
             conn->loop()->Stop();
         }
