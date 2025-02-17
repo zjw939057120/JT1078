@@ -2,46 +2,47 @@
 #include "MessageCallback.h"
 #include "ConnectionCallback.h"
 
-ConnectionCallback *connectionCallback = new ConnectionCallback();
+evpp::TCPConnPtr m_TCPConnPtr;
+MessageCallback *g_messageCallback;
+ConnectionCallback *g_connectionCallback;
 
-void SendMessage(const evpp::TCPConnPtr &conn) {
+
+void TCP_Client::SendMessage(const evpp::TCPConnPtr &conn) {
     if (conn->IsConnected()) {
-        connectionCallback->Send(conn);
+        g_connectionCallback->Send(conn);
     }
 }
 
-int main(int argc, char *argv[]) {
-    MessageCallback *messageCallback = new MessageCallback();
+TCP_Client::TCP_Client(std::string addr) {
+    this->addr = addr;
+    M_ConnectionCallback = new ConnectionCallback();
+    m_MessageCallback = new MessageCallback();
 
-    std::string addr = "47.100.112.218:8808";
+}
 
-    if (argc == 2) {
-        addr = argv[1];
-    }
-
+void TCP_Client::Run() {
     evpp::EventLoop loop;
     evpp::TCPClient client(&loop, addr, "TCPPingPongClient");
-    client.SetMessageCallback([&loop, &client, &messageCallback](const evpp::TCPConnPtr &conn,
-                                                                 evpp::Buffer *msg) {
+    client.SetMessageCallback([&loop, &client, this](const evpp::TCPConnPtr &conn,
+                                                     evpp::Buffer *msg) {
         //LOG_INFO << "Receive a message [" << msg->ToString() << "]";
         //client.Disconnect();
 
-        messageCallback->Receive(msg);
+        m_MessageCallback->Receive(msg);
         msg->Reset();
     });
 
-    client.SetConnectionCallback([&loop](const evpp::TCPConnPtr &conn) {
+    client.SetConnectionCallback([&loop, this](const evpp::TCPConnPtr &conn) {
         if (conn->IsConnected()) {
             LOG_INFO << "Connected to " << conn->remote_addr();
             //conn->Send("hello");
-
+            memcpy(&m_TCPConnPtr, &conn, sizeof(evpp::TCPConnPtr));
             evpp::Duration duration(3.0);
-            loop.RunEvery(duration, [conn]() { SendMessage(conn); });
+            loop.RunEvery(duration, [conn, this]() { SendMessage(conn); });
         } else {
             conn->loop()->Stop();
         }
     });
     client.Connect();
     loop.Run();
-    return 0;
 }

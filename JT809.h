@@ -7,7 +7,8 @@
 
 
 class JT809 {
-
+public:
+    JT809();
 };
 
 

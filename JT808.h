@@ -8,6 +8,8 @@
 
 class JT808 {
 
+public:
+    JT808();
 };
 
 
